@@ -454,8 +454,8 @@ def _seed_defaults() -> None:
                             :code,
                             :display_name,
                             :description,
-                            1,
-                            1,
+                            TRUE,
+                            TRUE,
                             CURRENT_TIMESTAMP,
                             CURRENT_TIMESTAMP
                         )
@@ -475,8 +475,8 @@ def _seed_defaults() -> None:
                         SET
                             display_name = :display_name,
                             description = :description,
-                            is_system = 1,
-                            is_active = 1,
+                            is_system = TRUE,
+                            is_active = TRUE,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE code = :code
                         """
@@ -534,8 +534,8 @@ def _seed_defaults() -> None:
                             :name,
                             :display_name,
                             :description,
-                            1,
-                            1,
+                            TRUE,
+                            TRUE,
                             CURRENT_TIMESTAMP,
                             CURRENT_TIMESTAMP
                         )
@@ -555,8 +555,8 @@ def _seed_defaults() -> None:
                         SET
                             display_name = :display_name,
                             description = :description,
-                            is_system = 1,
-                            is_active = 1,
+                            is_system = TRUE,
+                            is_active = TRUE,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE name = :name
                         """
