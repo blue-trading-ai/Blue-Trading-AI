@@ -1,0 +1,50 @@
+# Blue Trading AI - Root Git Ignore
+
+# Backups
+backups/
+
+# Secrets / local environment
+.env
+.env.local
+.env.development
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.db
+*.sqlite
+*.sqlite3
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+
+# Logs
+*.log
+logs/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Deployment local metadata
+.vercel/
+
+# SQLite runtime files
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Local backup / safety copies
+*.backup.*
+*_backup.py
+*_backup_*.py
+*_STABLE_SAFETY_*.py
+*.backup.tsx
