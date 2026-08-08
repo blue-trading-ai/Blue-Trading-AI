@@ -7,17 +7,8 @@ Create Date: 2026-08-02 22:52:14.101851
 Initial database foundation for Blue-Trading-AI.
 
 Creates:
-- users (Version 31 foundation)
-- trade_history (Version 30 trading foundation)
-
-Later migrations add:
-- owner approval
-- password security
-- login protection
-- email verification
-- roles
-- trading signals
-- background services
+- users
+- trade_history
 """
 
 from __future__ import annotations
@@ -37,7 +28,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
 
     # ============================
-    # USERS TABLE - VERSION 31
+    # USERS TABLE
     # ============================
 
     op.create_table(
@@ -71,7 +62,7 @@ def upgrade() -> None:
             "is_active",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("1"),
+            server_default=sa.text("true"),
         ),
 
         sa.Column(
@@ -83,9 +74,7 @@ def upgrade() -> None:
             ),
         ),
 
-        sa.PrimaryKeyConstraint(
-            "id"
-        ),
+        sa.PrimaryKeyConstraint("id"),
 
         sa.UniqueConstraint(
             "username",
@@ -124,8 +113,9 @@ def upgrade() -> None:
 
 
     # ============================
-    # TRADE HISTORY TABLE
+    # TRADE HISTORY
     # ============================
+
 
     op.create_table(
         "trade_history",
@@ -214,6 +204,12 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("0"),
         ),
+                sa.Column(
+            "confirmation_count",
+            sa.Integer(),
+            nullable=False,
+            server_default=sa.text("0"),
+        ),
 
         sa.Column(
             "trade_quality_score",
@@ -240,11 +236,12 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("'PENDING'"),
         ),
-                sa.Column(
+
+        sa.Column(
             "trade_allowed",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("1"),
+            server_default=sa.text("true"),
         ),
 
         sa.Column(
@@ -263,21 +260,21 @@ def upgrade() -> None:
             "tp1_hit",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("0"),
+            server_default=sa.text("false"),
         ),
 
         sa.Column(
             "tp2_hit",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("0"),
+            server_default=sa.text("false"),
         ),
 
         sa.Column(
             "stop_loss_hit",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("0"),
+            server_default=sa.text("false"),
         ),
 
         sa.Column(
@@ -303,7 +300,7 @@ def upgrade() -> None:
             "learning_registered",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("0"),
+            server_default=sa.text("false"),
         ),
 
         sa.Column(
@@ -378,7 +375,9 @@ def upgrade() -> None:
     )
 
 
-    # Trade history indexes
+    # ============================
+    # INDEXES
+    # ============================
 
     op.create_index(
         "ix_trade_history_id",
@@ -453,3 +452,4 @@ def downgrade() -> None:
     op.drop_table(
         "users"
     )
+    
