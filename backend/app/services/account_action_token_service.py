@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Final
 
 from fastapi import Request
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, lazyload
 
 from app.models.account_action_token import (
     AccountActionToken,
@@ -532,7 +532,11 @@ def get_token_record(
         )
 
     if lock_for_update:
-        query = query.with_for_update()
+        query = (
+            query
+            .options(lazyload("*"))
+            .with_for_update(of=AccountActionToken)
+        )
 
     return query.first()
 
