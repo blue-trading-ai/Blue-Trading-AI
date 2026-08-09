@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import (
@@ -118,6 +119,8 @@ from app.services.refresh_token_service import (
 from app.services.security_audit_service import audit_event
 
 
+LOGGER = logging.getLogger(__name__)
+
 PROJECT_NAME = "Blue-Trading-AI"
 AUTH_VERSION = 42
 ACCESS_TOKEN_TYPE = "bearer"
@@ -130,7 +133,15 @@ OWNER_APPROVAL_REQUIRED = settings.OWNER_APPROVAL_REQUIRED
 MAX_FAILED_LOGIN_ATTEMPTS = DEFAULT_MAX_FAILED_LOGIN_ATTEMPTS
 LOGIN_LOCKOUT_MINUTES = DEFAULT_LOGIN_LOCKOUT_MINUTES
 
-EMAIL_DELIVERY_CONNECTED = email_delivery_configured()
+def _email_delivery_connected() -> bool:
+    """
+    Resolve email-delivery readiness at request time.
+
+    This avoids a stale module-import snapshot after provider or
+    environment-variable changes.
+    """
+    return email_delivery_configured()
+
 
 EXPOSE_DEVELOPMENT_TOKENS = bool(
     settings.EXPOSE_DEVELOPMENT_TOKENS
@@ -210,7 +221,10 @@ def _send_verification_email_safely(
     Send a verification email without exposing SMTP details.
     """
 
-    if not EMAIL_DELIVERY_CONNECTED:
+    if not _email_delivery_connected():
+        LOGGER.warning(
+            "Verification email skipped because email delivery is not configured."
+        )
         return False, "Email delivery is not configured."
 
     try:
@@ -220,10 +234,15 @@ def _send_verification_email_safely(
             raw_token=raw_token,
         )
         return True, None
-    except (
-        EmailConfigurationError,
-        EmailDeliveryError,
-    ):
+    except EmailConfigurationError:
+        LOGGER.exception(
+            "Verification email configuration failed."
+        )
+        return False, "Email delivery failed."
+    except EmailDeliveryError:
+        LOGGER.exception(
+            "Verification email delivery failed."
+        )
         return False, "Email delivery failed."
 
 
@@ -236,7 +255,10 @@ def _send_password_reset_email_safely(
     Send a password-reset email without exposing SMTP details.
     """
 
-    if not EMAIL_DELIVERY_CONNECTED:
+    if not _email_delivery_connected():
+        LOGGER.warning(
+            "Password-reset email skipped because email delivery is not configured."
+        )
         return False, "Email delivery is not configured."
 
     try:
@@ -246,10 +268,15 @@ def _send_password_reset_email_safely(
             raw_token=raw_token,
         )
         return True, None
-    except (
-        EmailConfigurationError,
-        EmailDeliveryError,
-    ):
+    except EmailConfigurationError:
+        LOGGER.exception(
+            "Password-reset email configuration failed."
+        )
+        return False, "Email delivery failed."
+    except EmailDeliveryError:
+        LOGGER.exception(
+            "Password-reset email delivery failed."
+        )
         return False, "Email delivery failed."
 
 
@@ -391,8 +418,8 @@ def auth_home() -> dict[str, Any]:
         "password_reset_enabled": True,
         "one_time_token_hashing_enabled": True,
         "single_use_account_tokens_enabled": True,
-        "email_delivery_connected": EMAIL_DELIVERY_CONNECTED,
-        "smtp_email_delivery_enabled": EMAIL_DELIVERY_CONNECTED,
+        "email_delivery_connected": _email_delivery_connected(),
+        "smtp_email_delivery_enabled": _email_delivery_connected(),
         "verification_email_delivery_enabled": True,
         "password_reset_email_delivery_enabled": True,
         "roles_and_permissions_enabled": True,
@@ -567,7 +594,7 @@ def register_user(
         "access_granted": access_granted,
         "owner_approval_required": True,
         "email_verification_required": True,
-        "email_delivery_connected": EMAIL_DELIVERY_CONNECTED,
+        "email_delivery_connected": _email_delivery_connected(),
         "verification_email_sent": verification_email_sent,
         "verification_email_error": verification_email_error,
         "verification_expires_at": (
@@ -649,7 +676,7 @@ def request_email_verification(
             "token_id": token_record.token_id,
             "expires_at": token_record.expires_at,
             "email_delivery_connected": (
-                EMAIL_DELIVERY_CONNECTED
+                _email_delivery_connected()
             ),
             "verification_email_sent": (
                 verification_email_sent
@@ -667,7 +694,7 @@ def request_email_verification(
             if verification_email_sent
             else "Email verification token created."
         ),
-        "email_delivery_connected": EMAIL_DELIVERY_CONNECTED,
+        "email_delivery_connected": _email_delivery_connected(),
         "verification_email_sent": verification_email_sent,
         "verification_email_error": verification_email_error,
         "expires_at": token_record.expires_at,
@@ -825,7 +852,7 @@ def forgot_password(
                 "token_id": token_record.token_id,
                 "expires_at": token_record.expires_at,
                 "email_delivery_connected": (
-                    EMAIL_DELIVERY_CONNECTED
+                    _email_delivery_connected()
                 ),
                 "password_reset_email_sent": (
                     password_reset_email_sent
