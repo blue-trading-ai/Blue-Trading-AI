@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final, Iterable
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, lazyload
 
 from app.models.role_permission import (
     Permission,
@@ -611,11 +611,12 @@ def assign_role_to_user(
 
     assignment = (
         db.query(UserRole)
+        .options(lazyload("*"))
         .filter(
             UserRole.user_id == resolved_user_id,
             UserRole.role_id == int(role.id),
         )
-        .with_for_update()
+        .with_for_update(of=UserRole)
         .first()
     )
 
@@ -693,12 +694,13 @@ def revoke_role_from_user(
 
     assignment = (
         db.query(UserRole)
+        .options(lazyload("*"))
         .filter(
             UserRole.user_id == resolved_user_id,
             UserRole.role_id == int(role.id),
             UserRole.is_active.is_(True),
         )
-        .with_for_update()
+        .with_for_update(of=UserRole)
         .first()
     )
 
