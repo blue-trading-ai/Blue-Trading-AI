@@ -1191,6 +1191,20 @@ def login_user(
             approved_by="OWNER_EMAIL_BOOTSTRAP"
         )
 
+    # Repair RBAC state for an existing owner account created before
+    # role/permission bootstrapping was introduced.  Email identity alone
+    # is not used for authorization; protected routes rely on UserRole.
+    if account_matches_owner:
+        seed_default_roles_and_permissions(
+            db,
+            commit=True,
+        )
+        ensure_owner_role(
+            db,
+            user_id=int(existing_user.id),
+            commit=True,
+        )
+
     if (
         not existing_user.is_active
         or existing_user.account_status
