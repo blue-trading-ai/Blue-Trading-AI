@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import json
 import logging
 import os
 import smtplib
@@ -9,7 +10,9 @@ from dataclasses import dataclass
 from email.message import EmailMessage
 from email.utils import parseaddr
 from typing import Final
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote
+from urllib.request import Request, urlopen
 
 from dotenv import load_dotenv
 
@@ -21,6 +24,7 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_SMTP_PORT: Final[int] = 587
 DEFAULT_TIMEOUT_SECONDS: Final[int] = 20
 DEFAULT_FRONTEND_URL: Final[str] = "http://127.0.0.1:3000"
+DEFAULT_BREVO_API_URL: Final[str] = "https://api.brevo.com/v3/smtp/email"
 
 
 class EmailConfigurationError(RuntimeError):
@@ -263,6 +267,113 @@ def _build_message(
     return message
 
 
+def _brevo_api_key() -> str:
+    """
+    Return the Brevo API key from the environment.
+    """
+    return os.getenv("BREVO_API_KEY", "").strip()
+
+
+def _brevo_api_url() -> str:
+    """
+    Return the Brevo transactional-email HTTPS endpoint.
+    """
+    return (
+        os.getenv(
+            "BREVO_API_URL",
+            DEFAULT_BREVO_API_URL,
+        ).strip()
+        or DEFAULT_BREVO_API_URL
+    )
+
+
+def _send_email_via_brevo(
+    *,
+    to_email: str,
+    subject: str,
+    html_body: str,
+    settings: EmailSettings,
+) -> None:
+    """
+    Deliver one transactional email through Brevo's HTTPS API.
+    """
+    api_key = _brevo_api_key()
+
+    if not api_key:
+        raise EmailConfigurationError(
+            "BREVO_API_KEY is missing."
+        )
+
+    sender_email = _validate_email_address(
+        settings.sender_email,
+        "EMAIL_FROM_ADDRESS",
+    )
+    recipient = _validate_email_address(
+        to_email,
+        "Recipient",
+    )
+
+    clean_subject = str(subject or "").strip()
+    if not clean_subject or "\r" in clean_subject or "\n" in clean_subject:
+        raise EmailDeliveryError(
+            "Email subject is invalid."
+        )
+
+    payload = {
+        "sender": {
+            "name": settings.sender_name,
+            "email": sender_email,
+        },
+        "to": [
+            {
+                "email": recipient,
+            }
+        ],
+        "subject": clean_subject,
+        "htmlContent": str(html_body or ""),
+    }
+
+    request = Request(
+        _brevo_api_url(),
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "accept": "application/json",
+            "api-key": api_key,
+            "content-type": "application/json",
+            "user-agent": "Blue-Trading-AI/49",
+        },
+        method="POST",
+    )
+
+    try:
+        with urlopen(
+            request,
+            timeout=settings.timeout_seconds,
+        ) as response:
+            status = int(getattr(response, "status", 0) or 0)
+
+            if status != 201:
+                raise EmailDeliveryError(
+                    f"Brevo email delivery returned HTTP {status}."
+                )
+
+    except HTTPError as exc:
+        LOGGER.exception(
+            "Brevo email delivery failed with HTTP status %s.",
+            exc.code,
+        )
+        raise EmailDeliveryError(
+            "Email delivery failed."
+        ) from exc
+    except (URLError, OSError, TimeoutError) as exc:
+        LOGGER.exception(
+            "Brevo email delivery failed due to a network error."
+        )
+        raise EmailDeliveryError(
+            "Email delivery failed."
+        ) from exc
+
+
 def send_email(
     *,
     to_email: str,
@@ -272,7 +383,10 @@ def send_email(
     settings: EmailSettings | None = None,
 ) -> None:
     """
-    Deliver one email through the configured SMTP provider.
+    Deliver one transactional email.
+
+    Production prefers Brevo's HTTPS API when ``BREVO_API_KEY`` is present.
+    SMTP remains available as a local/backward-compatible fallback.
     """
 
     resolved_settings = (
@@ -280,6 +394,30 @@ def send_email(
         if settings is not None
         else load_email_settings()
     )
+
+    if _brevo_api_key():
+        if not resolved_settings.sender_email:
+            raise EmailConfigurationError(
+                "EMAIL_FROM_ADDRESS is required for Brevo delivery."
+            )
+
+        if resolved_settings.timeout_seconds <= 0:
+            raise EmailConfigurationError(
+                "SMTP_TIMEOUT_SECONDS must be greater than zero."
+            )
+
+        if "\r" in resolved_settings.sender_name or "\n" in resolved_settings.sender_name:
+            raise EmailConfigurationError(
+                "EMAIL_FROM_NAME contains invalid characters."
+            )
+
+        _send_email_via_brevo(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_body,
+            settings=resolved_settings,
+        )
+        return
 
     validate_email_settings(
         resolved_settings
@@ -557,11 +695,22 @@ def send_password_reset_email(
 
 def email_delivery_configured() -> bool:
     """
-    Return whether the minimum SMTP configuration exists.
+    Return whether a supported email-delivery provider is configured.
+
+    Brevo HTTPS delivery is preferred when ``BREVO_API_KEY`` exists.
+    Otherwise the legacy SMTP configuration is validated.
     """
 
     try:
         settings = load_email_settings()
+
+        if _brevo_api_key():
+            _validate_email_address(
+                settings.sender_email,
+                "EMAIL_FROM_ADDRESS",
+            )
+            return bool(settings.sender_name)
+
         validate_email_settings(settings)
         return True
     except EmailConfigurationError:
