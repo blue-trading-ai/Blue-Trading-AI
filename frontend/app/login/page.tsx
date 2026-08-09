@@ -4,6 +4,7 @@ import {
   type FormEvent,
   useState,
 } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -282,8 +283,15 @@ export default function LoginPage() {
 
           <div className="relative z-10">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-400/30 bg-gradient-to-br from-blue-600/30 to-cyan-400/10 text-lg font-black text-cyan-200 shadow-[0_0_28px_rgba(37,99,235,0.3)]">
-                B
+              <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-blue-400/30 bg-gradient-to-br from-blue-600/20 to-cyan-400/10 p-1 shadow-[0_0_28px_rgba(37,99,235,0.3)]">
+                <Image
+                  src="/blue-trading-ai-logo.png"
+                  alt="Blue-Trading-AI logo"
+                  width={48}
+                  height={48}
+                  priority
+                  className="h-full w-full object-contain"
+                />
               </div>
 
               <div>
@@ -340,8 +348,15 @@ export default function LoginPage() {
           <div className="mx-auto w-full max-w-md">
             <div className="lg:hidden">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-400/30 bg-gradient-to-br from-blue-600/30 to-cyan-400/10 text-lg font-black text-cyan-200">
-                  B
+                <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-blue-400/30 bg-gradient-to-br from-blue-600/20 to-cyan-400/10 p-1 shadow-[0_0_24px_rgba(37,99,235,0.24)]">
+                  <Image
+                    src="/blue-trading-ai-logo.png"
+                    alt="Blue-Trading-AI logo"
+                    width={44}
+                    height={44}
+                    priority
+                    className="h-full w-full object-contain"
+                  />
                 </div>
 
                 <div>
