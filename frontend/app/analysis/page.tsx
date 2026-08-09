@@ -10,14 +10,6 @@ const symbols = [
   "GBPUSD",
 ];
 
-const timeframes = [
-  "M15",
-  "M30",
-  "H1",
-  "H4",
-  "D1",
-];
-
 function formatValue(
   value: number | string | null,
 ): string {
@@ -49,9 +41,6 @@ export default function AnalysisPage() {
   const [symbol, setSymbol] =
     useState("XAUUSD");
 
-  const [timeframe, setTimeframe] =
-    useState("H1");
-
   const {
     result,
     isAnalyzing,
@@ -62,7 +51,7 @@ export default function AnalysisPage() {
   } = useMarketAnalysis();
 
   async function handleAnalyze() {
-    await analyze(symbol, timeframe);
+    await analyze(symbol);
   }
 
   return (
@@ -112,7 +101,7 @@ export default function AnalysisPage() {
       ) : null}
 
       <section className="midnight-panel rounded-3xl p-5">
-        <div className="grid gap-4 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto_auto] lg:items-end">
           <label className="block">
             <span className="text-xs font-black text-slate-300">
               Market
@@ -127,30 +116,6 @@ export default function AnalysisPage() {
               className="mt-2 w-full rounded-xl border border-blue-400/10 bg-[#091426] px-4 py-3 text-sm text-white focus:border-cyan-300/30 disabled:opacity-60"
             >
               {symbols.map((item) => (
-                <option
-                  key={item}
-                  value={item}
-                >
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-black text-slate-300">
-              Timeframe
-            </span>
-
-            <select
-              value={timeframe}
-              onChange={(event) =>
-                setTimeframe(event.target.value)
-              }
-              disabled={isAnalyzing}
-              className="mt-2 w-full rounded-xl border border-blue-400/10 bg-[#091426] px-4 py-3 text-sm text-white focus:border-cyan-300/30 disabled:opacity-60"
-            >
-              {timeframes.map((item) => (
                 <option
                   key={item}
                   value={item}
@@ -191,9 +156,9 @@ export default function AnalysisPage() {
             note: "Live backend analysis",
           },
           {
-            label: "Primary Timeframe",
-            value: timeframe,
-            note: "Higher timeframes also checked",
+            label: "Analysis Mode",
+            value: "Multi-Timeframe",
+            note: "M5 · M15 · M30 · H1 · H4 · D1",
           },
           {
             label: "Confidence",
@@ -241,7 +206,7 @@ export default function AnalysisPage() {
             <h2 className="mt-2 text-lg font-black text-white">
               {result
                 ? `${result.symbol} · ${result.timeframe}`
-                : `${symbol} · ${timeframe}`}
+                : `${symbol} · Multi-Timeframe`}
             </h2>
           </div>
 
@@ -396,8 +361,8 @@ export default function AnalysisPage() {
                 </h3>
 
                 <p className="mt-3 text-sm leading-6 text-slate-500">
-                  Select a market and timeframe, then run the
-                  analysis to load the real backend result.
+                  Select a market, then run the automatic
+                  multi-timeframe analysis to load the real backend result.
                 </p>
               </div>
             </div>

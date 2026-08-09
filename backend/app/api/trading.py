@@ -57,6 +57,16 @@ MAXIMUM_SYMBOL_LENGTH: Final[int] = 40
 MAXIMUM_INTERVAL_LENGTH: Final[int] = 20
 MAXIMUM_TRACKING_UPDATES: Final[int] = 500
 
+PRIMARY_ANALYSIS_INTERVAL: Final = "1h"
+AUTOMATIC_ANALYSIS_TIMEFRAMES: Final[tuple[str, ...]] = (
+    "5min",
+    "15min",
+    "30min",
+    "1h",
+    "4h",
+    "1day",
+)
+
 BROKER_CONNECTION_ENABLED: Final[bool] = False
 TRADE_EXECUTION_ENABLED: Final[bool] = False
 AUTOMATIC_ORDER_PLACEMENT_ENABLED: Final[bool] = False
@@ -616,6 +626,10 @@ def trading_home() -> Dict[
         "signal_history": "enabled",
         "signal_generation_method": "POST",
         "signal_generation_requires_approved_user": True,
+        "analysis_mode": "MULTI_TIMEFRAME",
+        "automatic_timeframes": list(AUTOMATIC_ANALYSIS_TIMEFRAMES),
+        "primary_analysis_interval": PRIMARY_ANALYSIS_INTERVAL,
+        "user_selects_timeframe": False,
         "analysis_only": True,
         "broker_connection_enabled": (
             BROKER_CONNECTION_ENABLED
@@ -646,6 +660,10 @@ def trading_test() -> Dict[
         "signal_history": "enabled",
         "signal_generation_method": "POST",
         "signal_generation_requires_approved_user": True,
+        "analysis_mode": "MULTI_TIMEFRAME",
+        "automatic_timeframes": list(AUTOMATIC_ANALYSIS_TIMEFRAMES),
+        "primary_analysis_interval": PRIMARY_ANALYSIS_INTERVAL,
+        "user_selects_timeframe": False,
         "analysis_only": True,
     }
 
@@ -653,13 +671,6 @@ def trading_test() -> Dict[
 @router.post("/signal/{symbol:path}")
 def trading_signal(
     symbol: str,
-    interval: str = Query(
-        default="1h",
-        max_length=MAXIMUM_INTERVAL_LENGTH,
-        description=(
-            "Market-data provider interval, for example 15min, 1h or 4h."
-        ),
-    ),
     force_refresh: bool = Query(
         default=False,
         description=(
@@ -678,7 +689,12 @@ def trading_signal(
     Any,
 ]:
     """
-    Generate a Version 30 guardrail-protected trading signal.
+    Generate a Version 30 guardrail-protected multi-timeframe signal.
+
+    The user selects only the market symbol. Blue-Trading-AI automatically
+    analyzes M5, M15, M30, H1, H4 and D1 internally. H1 remains the primary
+    candle set for the base signal while the signal engine performs the full
+    weighted multi-timeframe confirmation.
 
     This operation is POST-only because it can update active trade records
     and persist an approved signal. Approved authentication is required.
@@ -687,9 +703,7 @@ def trading_signal(
     resolved_symbol = _normalise_symbol(
         symbol
     )
-    resolved_interval = _normalise_interval(
-        interval
-    )
+    resolved_interval = PRIMARY_ANALYSIS_INTERVAL
 
     try:
         market_data = get_market_data(
@@ -900,6 +914,17 @@ def trading_signal(
             "interval"
         ] = resolved_interval
         signal[
+            "analysis_mode"
+        ] = "MULTI_TIMEFRAME"
+        signal[
+            "automatic_timeframes"
+        ] = list(
+            AUTOMATIC_ANALYSIS_TIMEFRAMES
+        )
+        signal[
+            "user_selects_timeframe"
+        ] = False
+        signal[
             "analysis_only"
         ] = True
         signal[
@@ -1003,6 +1028,11 @@ def trading_signal(
             "safety_version": SAFETY_VERSION,
             "symbol": resolved_symbol,
             "interval": resolved_interval,
+            "analysis_mode": "MULTI_TIMEFRAME",
+            "automatic_timeframes": list(
+                AUTOMATIC_ANALYSIS_TIMEFRAMES
+            ),
+            "user_selects_timeframe": False,
             "current_price": current_price,
             "prices_received": len(
                 prices
@@ -1109,6 +1139,8 @@ __all__ = [
     "BROKER_CONNECTION_ENABLED",
     "MINIMUM_CONFIDENCE",
     "MINIMUM_CONFIRMATIONS",
+    "PRIMARY_ANALYSIS_INTERVAL",
+    "AUTOMATIC_ANALYSIS_TIMEFRAMES",
     "PROJECT_NAME",
     "SAFETY_VERSION",
     "TRADE_EXECUTION_ENABLED",

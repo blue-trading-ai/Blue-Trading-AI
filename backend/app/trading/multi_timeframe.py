@@ -12,8 +12,10 @@ logger = logging.getLogger(__name__)
 TIMEFRAMES: Final[tuple[str, ...]] = (
     "5min",
     "15min",
+    "30min",
     "1h",
     "4h",
+    "1day",
 )
 
 MAXIMUM_SYMBOL_LENGTH: Final[int] = 40
@@ -67,27 +69,23 @@ def _safe_error_message(
 
 
 def analyze_multi_timeframe(
-    symbol,
-):
+    symbol: str,
+) -> dict[str, dict[str, Any]]:
     """
-    Analyze the configured execution and higher timeframes.
+    Analyze the complete automatic multi-timeframe stack.
 
     Each timeframe is isolated so one provider or analysis failure does not
     prevent the remaining timeframes from being returned.
     """
 
     try:
-        resolved_symbol = (
-            _normalise_symbol(
-                symbol
-            )
+        resolved_symbol = _normalise_symbol(
+            symbol
         )
     except ValueError as error:
         return {
             timeframe: {
-                "error": str(
-                    error
-                ),
+                "error": str(error),
             }
             for timeframe in TIMEFRAMES
         }

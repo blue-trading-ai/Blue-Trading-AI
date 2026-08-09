@@ -263,6 +263,10 @@ def generate_signal(
     if not isinstance(multi_tf, dict):
         multi_tf = {}
 
+    d1_trend = _safe_nested_mapping(
+        multi_tf,
+        "1day",
+    ).get("trend")
     h4_trend = _safe_nested_mapping(
         multi_tf,
         "4h",
@@ -271,9 +275,17 @@ def generate_signal(
         multi_tf,
         "1h",
     ).get("trend")
+    m30_trend = _safe_nested_mapping(
+        multi_tf,
+        "30min",
+    ).get("trend")
     m15_trend = _safe_nested_mapping(
         multi_tf,
         "15min",
+    ).get("trend")
+    m5_trend = _safe_nested_mapping(
+        multi_tf,
+        "5min",
     ).get("trend")
 
     # ==========================================
@@ -1060,25 +1072,66 @@ def generate_signal(
     # ==========================================
     # MULTI-TIMEFRAME CONFIRMATION
     # ==========================================
-    buy_confirmed = (
-        h4_trend == "UPTREND"
-        and h1_trend == "UPTREND"
-        and m15_trend == "UPTREND"
+    timeframe_trends = {
+        "D1": d1_trend,
+        "H4": h4_trend,
+        "H1": h1_trend,
+        "M30": m30_trend,
+        "M15": m15_trend,
+        "M5": m5_trend,
+    }
+    timeframe_weights = {
+        "D1": 3,
+        "H4": 3,
+        "H1": 2,
+        "M30": 1,
+        "M15": 1,
+        "M5": 1,
+    }
+
+    bullish_mtf_weight = sum(
+        timeframe_weights[label]
+        for label, timeframe_trend in timeframe_trends.items()
+        if timeframe_trend == "UPTREND"
+    )
+    bearish_mtf_weight = sum(
+        timeframe_weights[label]
+        for label, timeframe_trend in timeframe_trends.items()
+        if timeframe_trend == "DOWNTREND"
+    )
+    available_mtf_weight = sum(
+        timeframe_weights[label]
+        for label, timeframe_trend in timeframe_trends.items()
+        if timeframe_trend in {"UPTREND", "DOWNTREND"}
     )
 
-    sell_confirmed = (
-        h4_trend == "DOWNTREND"
-        and h1_trend == "DOWNTREND"
-        and m15_trend == "DOWNTREND"
+    buy_confirmed = bool(
+        available_mtf_weight >= 6
+        and bullish_mtf_weight >= 7
+        and bullish_mtf_weight > bearish_mtf_weight
+        and d1_trend != "DOWNTREND"
+        and h4_trend != "DOWNTREND"
+    )
+
+    sell_confirmed = bool(
+        available_mtf_weight >= 6
+        and bearish_mtf_weight >= 7
+        and bearish_mtf_weight > bullish_mtf_weight
+        and d1_trend != "UPTREND"
+        and h4_trend != "UPTREND"
     )
 
     if buy_confirmed:
         buy_score += 30
-        buy_reasons.append("H4, H1 and M15 confirm a bullish trend")
+        buy_reasons.append(
+            "D1, H4, H1, M30, M15 and M5 weighted bias confirms bullish alignment"
+        )
 
     if sell_confirmed:
         sell_score += 30
-        sell_reasons.append("H4, H1 and M15 confirm a bearish trend")
+        sell_reasons.append(
+            "D1, H4, H1, M30, M15 and M5 weighted bias confirms bearish alignment"
+        )
 
     # ==========================================
     # CHART PATTERNS
@@ -2059,10 +2112,16 @@ def generate_signal(
     # ==========================================
     # HIGHER-TIMEFRAME CONFLICT PENALTIES
     # ==========================================
+    if d1_trend == "DOWNTREND":
+        buy_score -= 30
+        buy_reasons.append("D1 trend conflicts with a BUY signal")
+    elif d1_trend == "UPTREND":
+        sell_score -= 30
+        sell_reasons.append("D1 trend conflicts with a SELL signal")
+
     if h4_trend == "DOWNTREND":
         buy_score -= 25
         buy_reasons.append("H4 trend conflicts with a BUY signal")
-
     elif h4_trend == "UPTREND":
         sell_score -= 25
         sell_reasons.append("H4 trend conflicts with a SELL signal")
@@ -2070,10 +2129,16 @@ def generate_signal(
     if h1_trend == "DOWNTREND":
         buy_score -= 15
         buy_reasons.append("H1 trend conflicts with a BUY signal")
-
     elif h1_trend == "UPTREND":
         sell_score -= 15
         sell_reasons.append("H1 trend conflicts with a SELL signal")
+
+    if m30_trend == "DOWNTREND":
+        buy_score -= 5
+        buy_reasons.append("M30 trend weakens the BUY setup")
+    elif m30_trend == "UPTREND":
+        sell_score -= 5
+        sell_reasons.append("M30 trend weakens the SELL setup")
 
     # ==========================================
     # LIMIT SCORES

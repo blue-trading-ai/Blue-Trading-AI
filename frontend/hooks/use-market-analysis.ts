@@ -18,7 +18,6 @@ type UseMarketAnalysisResult = {
   lastAnalyzed: Date | null;
   analyze: (
     symbol: string,
-    timeframe: string,
   ) => Promise<MarketAnalysisResult | null>;
   clear: () => void;
 };
@@ -42,7 +41,6 @@ export function useMarketAnalysis(): UseMarketAnalysisResult {
   const analyze = useCallback(
     async (
       symbol: string,
-      timeframe: string,
     ): Promise<MarketAnalysisResult | null> => {
       controllerRef.current?.abort();
 
@@ -59,7 +57,6 @@ export function useMarketAnalysis(): UseMarketAnalysisResult {
         const analysisResult =
           await runMarketAnalysis(
             symbol,
-            timeframe,
             controller.signal,
           );
 

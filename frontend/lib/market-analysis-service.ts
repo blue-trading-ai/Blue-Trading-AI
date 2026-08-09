@@ -108,26 +108,6 @@ function toReasons(
   return [];
 }
 
-function normalizeTimeframe(
-  timeframe: string,
-): string {
-  const normalized = timeframe
-    .trim()
-    .toLowerCase();
-
-  const mapping: Record<string, string> = {
-    m5: "5m",
-    m15: "15m",
-    m30: "30m",
-    h1: "1h",
-    h4: "4h",
-    d1: "1d",
-    daily: "1d",
-  };
-
-  return mapping[normalized] || normalized;
-}
-
 function getErrorMessage(
   payload: unknown,
   fallback: string,
@@ -158,7 +138,6 @@ function getErrorMessage(
 
 export async function runMarketAnalysis(
   symbol: string,
-  timeframe: string,
   signal?: AbortSignal,
 ): Promise<MarketAnalysisResult> {
   const accessToken = getAccessToken();
@@ -175,16 +154,12 @@ export async function runMarketAnalysis(
     .trim()
     .toUpperCase();
 
-  const normalizedTimeframe =
-    normalizeTimeframe(timeframe);
-
   const endpoint =
     `${API_BASE_URL}/trading/signal/` +
-    `${encodeURIComponent(normalizedSymbol)}` +
-    `?interval=${encodeURIComponent(normalizedTimeframe)}`;
+    `${encodeURIComponent(normalizedSymbol)}`;
 
   const response = await fetch(endpoint, {
-    method: "GET",
+    method: "POST",
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${accessToken}`,
@@ -216,6 +191,16 @@ export async function runMarketAnalysis(
     ? payload
     : {};
 
+  const nestedSignal = isRecord(source.signal)
+    ? source.signal
+    : source;
+
+  const riskPlan = isRecord(
+    nestedSignal.risk_plan,
+  )
+    ? nestedSignal.risk_plan
+    : {};
+
   return {
     symbol:
       toText(
@@ -224,28 +209,32 @@ export async function runMarketAnalysis(
           "pair",
           "market",
         ]),
-      ) || normalizedSymbol,
-    timeframe:
+      ) ||
       toText(
-        firstDefined(source, [
-          "timeframe",
-          "interval",
-          "tf",
+        firstDefined(nestedSignal, [
+          "symbol",
+          "pair",
+          "market",
         ]),
-      ) || timeframe.toUpperCase(),
+      ) ||
+      normalizedSymbol,
+    timeframe: "Multi-Timeframe",
     signal: toText(
-      firstDefined(source, [
+      firstDefined(nestedSignal, [
         "signal",
         "direction",
         "bias",
         "trade_direction",
+        "final_decision",
       ]),
     ),
     confidence: Math.min(
       Math.max(
         toNumber(
-          firstDefined(source, [
+          firstDefined(nestedSignal, [
             "confidence",
+            "final_confidence",
+            "dynamic_confidence",
             "confidence_score",
             "confidence_level",
             "score",
@@ -258,7 +247,7 @@ export async function runMarketAnalysis(
     confirmations: Math.max(
       Math.trunc(
         toNumber(
-          firstDefined(source, [
+          firstDefined(nestedSignal, [
             "confirmations",
             "confirmation_count",
             "confirmations_count",
@@ -267,52 +256,79 @@ export async function runMarketAnalysis(
       ),
       0,
     ),
-    entry: toText(
-      firstDefined(source, [
-        "entry",
-        "entry_price",
-        "entry_level",
-      ]),
-    ),
-    stopLoss: toText(
-      firstDefined(source, [
-        "stop_loss",
-        "stopLoss",
-        "sl",
-      ]),
-    ),
-    takeProfit1: toText(
-      firstDefined(source, [
-        "take_profit_1",
-        "takeProfit1",
-        "tp1",
-        "take_profit",
-      ]),
-    ),
-    takeProfit2: toText(
-      firstDefined(source, [
-        "take_profit_2",
-        "takeProfit2",
-        "tp2",
-      ]),
-    ),
-    riskReward: toText(
-      firstDefined(source, [
-        "risk_reward",
-        "riskReward",
-        "rr",
-        "rr_ratio",
-      ]),
-    ),
+    entry:
+      toText(
+        firstDefined(nestedSignal, [
+          "entry",
+          "entry_price",
+          "entry_level",
+          "market_price",
+        ]),
+      ),
+    stopLoss:
+      toText(
+        firstDefined(nestedSignal, [
+          "stop_loss",
+          "stopLoss",
+          "sl",
+        ]),
+      ) ||
+      toText(
+        firstDefined(riskPlan, [
+          "stop_loss",
+        ]),
+      ),
+    takeProfit1:
+      toText(
+        firstDefined(nestedSignal, [
+          "take_profit_1",
+          "takeProfit1",
+          "tp1",
+          "take_profit",
+        ]),
+      ) ||
+      toText(
+        firstDefined(riskPlan, [
+          "take_profit_1",
+        ]),
+      ),
+    takeProfit2:
+      toText(
+        firstDefined(nestedSignal, [
+          "take_profit_2",
+          "takeProfit2",
+          "tp2",
+        ]),
+      ) ||
+      toText(
+        firstDefined(riskPlan, [
+          "take_profit_2",
+        ]),
+      ),
+    riskReward:
+      toText(
+        firstDefined(nestedSignal, [
+          "risk_reward",
+          "riskReward",
+          "rr",
+          "rr_ratio",
+          "risk_reward_tp1",
+        ]),
+      ) ||
+      toText(
+        firstDefined(riskPlan, [
+          "risk_reward_tp1",
+        ]),
+      ),
     marketStructure: toText(
-      firstDefined(source, [
+      firstDefined(nestedSignal, [
         "market_structure",
         "marketStructure",
         "structure",
       ]),
     ),
     reasons: toReasons(
-      firstDefined(source, [
+      firstDefined(nestedSignal, [
         "reasons",
         "confirmation_reasons",
         "confirmations_list",
