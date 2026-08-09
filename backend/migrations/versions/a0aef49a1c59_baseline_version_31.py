@@ -175,10 +175,7 @@ def create_users_table():
 
 
 
-def upgrade():
-
-    create_users_table()
-    # ============================
+# ============================
 # TRADE HISTORY TABLE
 # ============================
 
@@ -369,6 +366,25 @@ def create_trade_history_table():
         ),
 
         sa.Column(
+            "profit_loss_points",
+            sa.Float(),
+            nullable=False,
+            server_default=sa.text("0.0"),
+        ),
+
+        sa.Column(
+            "risk_reward_achieved",
+            sa.Float(),
+            nullable=True,
+        ),
+
+        sa.Column(
+            "trade_duration_seconds",
+            sa.Integer(),
+            nullable=True,
+        ),
+
+        sa.Column(
             "learning_registered",
             sa.Boolean(),
             nullable=False,
@@ -547,6 +563,34 @@ def add_missing_trade_columns():
                 )
             )
 
+
+        if "profit_loss_points" not in columns:
+            batch_op.add_column(
+                sa.Column(
+                    "profit_loss_points",
+                    sa.Float(),
+                    nullable=False,
+                    server_default=sa.text("0.0"),
+                )
+            )
+
+        if "risk_reward_achieved" not in columns:
+            batch_op.add_column(
+                sa.Column(
+                    "risk_reward_achieved",
+                    sa.Float(),
+                    nullable=True,
+                )
+            )
+
+        if "trade_duration_seconds" not in columns:
+            batch_op.add_column(
+                sa.Column(
+                    "trade_duration_seconds",
+                    sa.Integer(),
+                    nullable=True,
+                )
+            )
 
         if "learning_registered" not in columns:
             batch_op.add_column(
