@@ -285,7 +285,7 @@ export function Topbar() {
     });
 
   return (
-    <header className="flex min-h-20 items-center justify-between border-b border-blue-400/10 bg-[#050b16]/85 px-3 py-3 backdrop-blur-xl sm:px-5 lg:px-6">
+    <header className="relative z-50 flex min-h-20 items-center justify-between border-b border-blue-400/10 bg-[#050b16]/85 px-3 py-3 backdrop-blur-xl sm:px-5 lg:px-6">
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         <MobileSidebar />
 
