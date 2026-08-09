@@ -224,7 +224,7 @@ export function clearCurrentUserCache(): void {
 
   publishSnapshot({
     user: null,
-    isLoading: false,
+    isLoading: true,
     error: null,
     errorStatus: null,
     errorDetails: null,
@@ -250,7 +250,7 @@ export function setCurrentUserCache(
 
 export function useCurrentUser(): CurrentUserState {
   const [snapshot, setSnapshot] =
-    useState<CurrentUserSnapshot>(
+    useState(
       sharedSnapshot,
     );
 

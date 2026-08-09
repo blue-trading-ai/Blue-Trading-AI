@@ -283,12 +283,12 @@ export default function LoginPage() {
 
           <div className="relative z-10">
             <div className="flex items-center gap-3">
-              <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-blue-400/30 bg-gradient-to-br from-blue-600/20 to-cyan-400/10 p-1 shadow-[0_0_28px_rgba(37,99,235,0.3)]">
+              <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-blue-400/30 bg-gradient-to-br from-blue-600/20 to-cyan-400/10 p-1.5 shadow-[0_0_34px_rgba(37,99,235,0.34)]">
                 <Image
                   src="/blue-trading-ai-logo.png"
                   alt="Blue-Trading-AI logo"
-                  width={48}
-                  height={48}
+                  width={80}
+                  height={80}
                   priority
                   className="h-full w-full object-contain"
                 />
@@ -348,12 +348,12 @@ export default function LoginPage() {
           <div className="mx-auto w-full max-w-md">
             <div className="lg:hidden">
               <div className="flex items-center gap-3">
-                <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-blue-400/30 bg-gradient-to-br from-blue-600/20 to-cyan-400/10 p-1 shadow-[0_0_24px_rgba(37,99,235,0.24)]">
+                <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-blue-400/30 bg-gradient-to-br from-blue-600/20 to-cyan-400/10 p-1.5 shadow-[0_0_28px_rgba(37,99,235,0.28)]">
                   <Image
                     src="/blue-trading-ai-logo.png"
                     alt="Blue-Trading-AI logo"
-                    width={44}
-                    height={44}
+                    width={64}
+                    height={64}
                     priority
                     className="h-full w-full object-contain"
                   />
