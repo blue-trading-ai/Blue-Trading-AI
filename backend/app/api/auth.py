@@ -1164,8 +1164,26 @@ def login_user(
     if upgraded_hash:
         existing_user.hashed_password = upgraded_hash
 
+    owner_email_configured = bool(
+        str(settings.OWNER_EMAIL or "").strip()
+    )
+    account_matches_owner = _is_owner_email(
+        existing_user.email
+    )
+
+    if existing_user.account_status == ACCOUNT_STATUS_PENDING:
+        LOGGER.warning(
+            "Owner bootstrap diagnostic: "
+            "owner_email_configured=%s "
+            "account_matches_owner=%s "
+            "account_status=%s",
+            owner_email_configured,
+            account_matches_owner,
+            existing_user.account_status,
+        )
+
     if (
-        _is_owner_email(existing_user.email)
+        account_matches_owner
         and existing_user.account_status
         == ACCOUNT_STATUS_PENDING
     ):
