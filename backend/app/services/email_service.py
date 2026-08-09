@@ -7,6 +7,7 @@ import smtplib
 import ssl
 from dataclasses import dataclass
 from email.message import EmailMessage
+from email.utils import parseaddr
 from typing import Final
 from urllib.parse import quote
 
@@ -187,6 +188,53 @@ def validate_email_settings(
             "SMTP_TIMEOUT_SECONDS must be greater than zero."
         )
 
+    _validate_email_address(
+        settings.smtp_username,
+        "SMTP_USERNAME",
+    )
+    _validate_email_address(
+        settings.sender_email,
+        "EMAIL_FROM_ADDRESS",
+    )
+
+    if "\r" in settings.sender_name or "\n" in settings.sender_name:
+        raise EmailConfigurationError(
+            "EMAIL_FROM_NAME contains invalid characters."
+        )
+
+
+def _validate_email_address(value: str, field_name: str) -> str:
+    """
+    Normalize and validate one mailbox address for SMTP/header use.
+    """
+    candidate = str(value or "").strip()
+
+    if not candidate or "\r" in candidate or "\n" in candidate:
+        raise EmailConfigurationError(
+            f"{field_name} must be a valid email address."
+        )
+
+    display_name, address = parseaddr(candidate)
+
+    if display_name or not address or "@" not in address:
+        raise EmailConfigurationError(
+            f"{field_name} must contain only one email address."
+        )
+
+    local_part, _, domain_part = address.rpartition("@")
+
+    if (
+        not local_part
+        or not domain_part
+        or "." not in domain_part
+        or any(character.isspace() for character in address)
+    ):
+        raise EmailConfigurationError(
+            f"{field_name} must be a valid email address."
+        )
+
+    return address.lower()
+
 
 def _build_message(
     *,
@@ -237,12 +285,15 @@ def send_email(
         resolved_settings
     )
 
-    recipient = str(to_email or "").strip().lower()
-
-    if not recipient or "@" not in recipient:
+    try:
+        recipient = _validate_email_address(
+            to_email,
+            "Recipient",
+        )
+    except EmailConfigurationError as exc:
         raise EmailDeliveryError(
             "Recipient email address is invalid."
-        )
+        ) from exc
 
     message = _build_message(
         to_email=recipient,
@@ -293,8 +344,7 @@ def send_email(
         ssl.SSLError,
     ) as exc:
         LOGGER.exception(
-            "Email delivery failed for recipient %s",
-            recipient,
+            "Email delivery failed."
         )
         raise EmailDeliveryError(
             "Email delivery failed."
