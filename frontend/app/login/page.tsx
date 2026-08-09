@@ -90,7 +90,6 @@ function getSuccessfulLoginRoute(
     getAccountStatus(response);
 
   if (
-    response.owner_approval_required === true ||
     response.access_granted === false ||
     accountStatus === "PENDING"
   ) {
