@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -26,10 +27,6 @@ const navigationItems: NavigationItem[] = [
   {
     label: "Trading Signals",
     href: "/signals",
-  },
-  {
-    label: "Market Structure",
-    href: "/market-structure",
   },
   {
     label: "Performance",
@@ -99,7 +96,10 @@ function NavigationLink({
       }`}
     >
       {active ? (
-        <span className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-gradient-to-b from-blue-400 to-cyan-300 shadow-[0_0_14px_rgba(34,211,238,0.65)]" />
+        <span
+          className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.8)]"
+          aria-hidden="true"
+        />
       ) : null}
 
       <span className="relative z-10">
@@ -142,23 +142,29 @@ export function Sidebar() {
       : accountItems;
 
   return (
-    <aside className="midnight-panel hidden min-h-screen w-72 shrink-0 border-y-0 border-l-0 p-5 lg:flex lg:flex-col">
+    <aside className="hidden h-screen w-72 shrink-0 flex-col border-r border-blue-400/10 bg-[#050b16]/95 p-5 backdrop-blur-xl lg:flex">
       <Link
         href="/dashboard"
-        className="group flex items-center gap-3 rounded-2xl border border-transparent p-2 transition hover:border-blue-400/10 hover:bg-blue-500/[0.04]"
+        className="flex items-center gap-3"
       >
-        <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-400/30 bg-gradient-to-br from-blue-600/30 to-cyan-400/10 text-lg font-black text-cyan-200 shadow-[0_0_24px_rgba(37,99,235,0.22)]">
-          B
-
+        <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-blue-400/30 bg-gradient-to-br from-blue-600/20 to-cyan-400/10 p-1.5 shadow-[0_0_30px_rgba(37,99,235,0.28)]">
+          <Image
+            src="/blue-trading-ai-logo.png"
+            alt="Blue-Trading-AI logo"
+            width={64}
+            height={64}
+            priority
+            className="h-full w-full object-contain"
+          />
           <span className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
         </div>
 
-        <div>
-          <p className="text-sm font-black tracking-tight text-white">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black tracking-tight text-white">
             Blue-Trading-AI
           </p>
 
-          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+          <p className="mt-1 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
             Intelligence Before Execution
           </p>
         </div>

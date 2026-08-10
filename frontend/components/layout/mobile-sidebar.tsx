@@ -15,7 +15,6 @@ const navigationItems: NavigationItem[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Live Analysis", href: "/analysis" },
   { label: "Trading Signals", href: "/signals" },
-  { label: "Market Structure", href: "/market-structure" },
   { label: "Performance", href: "/performance" },
   { label: "Signal History", href: "/history" },
   { label: "Economic News", href: "/news" },
