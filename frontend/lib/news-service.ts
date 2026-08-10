@@ -1,3 +1,5 @@
+"use client";
+
 import {
   API_BASE_URL,
   ApiError,
@@ -30,9 +32,26 @@ export type MarketNewsResponse = {
 
 type UnknownRecord = Record<string, unknown>;
 
-const NEWS_ENDPOINT =
-  process.env.NEXT_PUBLIC_NEWS_ENDPOINT?.trim() ||
-  "/economic-news/upcoming";
+const NEWS_API_PREFIX = "/economic-news";
+
+const SYMBOL_CURRENCY_FILTERS: Record<string, string[]> = {
+  XAUUSD: ["USD"],
+  BTCUSD: ["USD"],
+  ETHUSD: ["USD"],
+  EURUSD: ["EUR", "USD"],
+  GBPUSD: ["GBP", "USD"],
+  USDJPY: ["USD", "JPY"],
+  AUDUSD: ["AUD", "USD"],
+  NZDUSD: ["NZD", "USD"],
+  USDCAD: ["USD", "CAD"],
+  USDCHF: ["USD", "CHF"],
+  EURGBP: ["EUR", "GBP"],
+  EURJPY: ["EUR", "JPY"],
+  GBPJPY: ["GBP", "JPY"],
+  AUDJPY: ["AUD", "JPY"],
+  CADJPY: ["CAD", "JPY"],
+  CHFJPY: ["CHF", "JPY"],
+};
 
 function isRecord(
   value: unknown,
@@ -166,19 +185,6 @@ function toStringArray(
     .filter(Boolean);
 }
 
-function normalizePeriod(
-  period: string,
-): string {
-  const mapping: Record<string, string> = {
-    Today: "today",
-    "Next 24 Hours": "24h",
-    "This Week": "week",
-    "All Upcoming": "all",
-  };
-
-  return mapping[period] || period;
-}
-
 function getErrorMessage(
   payload: unknown,
   fallback: string,
@@ -190,7 +196,10 @@ function getErrorMessage(
       "error",
     ]);
 
-    if (typeof detail === "string" && detail.trim()) {
+    if (
+      typeof detail === "string" &&
+      detail.trim()
+    ) {
       return detail.trim();
     }
 
@@ -308,7 +317,7 @@ function normalizeEvent(
     ]),
   );
 
-  const affectedMarkets = toStringArray(
+  let affectedMarkets = toStringArray(
     firstDefined(value, [
       "affected_markets",
       "affectedMarkets",
@@ -318,6 +327,13 @@ function normalizeEvent(
       "affected_symbols",
     ]),
   );
+
+  if (
+    affectedMarkets.length === 0 &&
+    currency !== "N/A"
+  ) {
+    affectedMarkets = [currency];
+  }
 
   const conflict = toBoolean(
     firstDefined(value, [
@@ -367,6 +383,7 @@ function normalizeEvent(
     impact,
     eventTime: toText(
       firstDefined(value, [
+        "scheduled_datetime",
         "event_time",
         "eventTime",
         "datetime",
@@ -417,6 +434,91 @@ function normalizeEvent(
   };
 }
 
+function getCalendarRequest(
+  impact: string,
+  market: string,
+  period: string,
+): {
+  endpoint: string;
+  query: URLSearchParams;
+} {
+  const query = new URLSearchParams();
+
+  const normalizedPeriod =
+    period.trim().toLowerCase();
+
+  let endpoint = `${NEWS_API_PREFIX}/upcoming`;
+
+  if (
+    normalizedPeriod === "this week" ||
+    normalizedPeriod === "week" ||
+    normalizedPeriod === "weekly"
+  ) {
+    endpoint = `${NEWS_API_PREFIX}/calendar/weekly`;
+  } else if (
+    normalizedPeriod === "this month" ||
+    normalizedPeriod === "month" ||
+    normalizedPeriod === "monthly"
+  ) {
+    endpoint = `${NEWS_API_PREFIX}/calendar/monthly`;
+  } else if (
+    normalizedPeriod === "all upcoming" ||
+    normalizedPeriod === "all"
+  ) {
+    query.set("hours", "168");
+  } else {
+    query.set("hours", "24");
+  }
+
+  const isCalendarEndpoint =
+    endpoint.includes("/calendar/");
+
+  if (
+    isCalendarEndpoint &&
+    impact !== "All Impact"
+  ) {
+    query.set(
+      "impacts",
+      impact.trim().toUpperCase(),
+    );
+  }
+
+  if (
+    isCalendarEndpoint &&
+    market !== "All Markets"
+  ) {
+    const normalizedMarket =
+      market
+        .trim()
+        .toUpperCase()
+        .replace("/", "")
+        .replace("-", "")
+        .replace("_", "");
+
+    const currencies =
+      SYMBOL_CURRENCY_FILTERS[
+        normalizedMarket
+      ] ||
+      (/^[A-Z]{3}$/.test(
+        normalizedMarket
+      )
+        ? [normalizedMarket]
+        : []);
+
+    if (currencies.length > 0) {
+      query.set(
+        "currencies",
+        currencies.join(","),
+      );
+    }
+  }
+
+  return {
+    endpoint,
+    query,
+  };
+}
+
 export async function getMarketNews(
   impact: string,
   market: string,
@@ -433,27 +535,28 @@ export async function getMarketNews(
     );
   }
 
-  const query = new URLSearchParams({
-    period: normalizePeriod(period),
-  });
+  const {
+    endpoint,
+    query,
+  } = getCalendarRequest(
+    impact,
+    market,
+    period,
+  );
 
-  if (impact !== "All Impact") {
-    query.set(
-      "impact",
-      impact.trim().toUpperCase(),
+  const queryString =
+    query.toString();
+
+  const requestUrl =
+    `${API_BASE_URL}${endpoint}` +
+    (
+      queryString
+        ? `?${queryString}`
+        : ""
     );
-  }
-
-  if (market !== "All Markets") {
-    const normalizedMarket =
-      market.trim().toUpperCase();
-
-    query.set("market", normalizedMarket);
-    query.set("symbol", normalizedMarket);
-  }
 
   const response = await fetch(
-    `${API_BASE_URL}${NEWS_ENDPOINT}?${query.toString()}`,
+    requestUrl,
     {
       method: "GET",
       headers: {
@@ -466,10 +569,14 @@ export async function getMarketNews(
   );
 
   const contentType =
-    response.headers.get("content-type") || "";
+    response.headers.get(
+      "content-type",
+    ) || "";
 
   const payload: unknown =
-    contentType.includes("application/json")
+    contentType.includes(
+      "application/json",
+    )
       ? await response.json()
       : await response.text();
 
@@ -484,25 +591,86 @@ export async function getMarketNews(
     );
   }
 
-  const events = getItems(payload)
+  let events = getItems(payload)
     .map(normalizeEvent)
     .filter(
       (
         event,
       ): event is MarketNewsEvent =>
         event !== null,
-    )
-    .sort((first, second) => {
-      const firstTime = first.eventTime
-        ? Date.parse(first.eventTime)
-        : Number.MAX_SAFE_INTEGER;
+    );
 
-      const secondTime = second.eventTime
-        ? Date.parse(second.eventTime)
-        : Number.MAX_SAFE_INTEGER;
+  /*
+   * /upcoming currently accepts only the hours window.
+   * Keep impact/market filtering client-side for those views.
+   * Weekly/monthly filtering is handled by the backend.
+   */
+  if (
+    !endpoint.includes("/calendar/")
+  ) {
+    if (impact !== "All Impact") {
+      const normalizedImpact =
+        impact.trim().toUpperCase();
+
+      events = events.filter(
+        (event) =>
+          event.impact ===
+          normalizedImpact,
+      );
+    }
+
+    if (market !== "All Markets") {
+      const normalizedMarket =
+        market
+          .trim()
+          .toUpperCase()
+          .replace("/", "")
+          .replace("-", "")
+          .replace("_", "");
+
+      const currencies =
+        SYMBOL_CURRENCY_FILTERS[
+          normalizedMarket
+        ] ||
+        (/^[A-Z]{3}$/.test(
+          normalizedMarket
+        )
+          ? [normalizedMarket]
+          : []);
+
+      if (currencies.length > 0) {
+        events = events.filter(
+          (event) =>
+            currencies.includes(
+              event.currency,
+            ),
+        );
+      }
+    }
+  }
+
+  events.sort(
+    (
+      first,
+      second,
+    ) => {
+      const firstTime =
+        first.eventTime
+          ? Date.parse(
+              first.eventTime,
+            )
+          : Number.MAX_SAFE_INTEGER;
+
+      const secondTime =
+        second.eventTime
+          ? Date.parse(
+              second.eventTime,
+            )
+          : Number.MAX_SAFE_INTEGER;
 
       return firstTime - secondTime;
-    });
+    },
+  );
 
   const uniqueMarkets = new Set(
     events.flatMap(
@@ -522,6 +690,7 @@ export async function getMarketNews(
       (event) =>
         event.conflict,
     ).length,
-    affectedMarkets: uniqueMarkets.size,
+    affectedMarkets:
+      uniqueMarkets.size,
   };
 }

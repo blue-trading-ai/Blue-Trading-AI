@@ -12,19 +12,16 @@ const impactLevels = [
   "Low",
 ];
 
-const markets = [
-  "All Markets",
-  "XAUUSD",
-  "BTCUSD",
-  "GBPUSD",
+const currencies = [
+  "All Currencies",
   "USD",
-];
-
-const periods = [
-  "Today",
-  "Next 24 Hours",
-  "This Week",
-  "All Upcoming",
+  "EUR",
+  "GBP",
+  "JPY",
+  "AUD",
+  "NZD",
+  "CAD",
+  "CHF",
 ];
 
 function formatDateTime(
@@ -123,6 +120,10 @@ function NewsRow({
         {event.previous || "—"}
       </td>
 
+      <td className="px-5 py-4 text-xs font-black text-white">
+        {event.actual || "—"}
+      </td>
+
       <td className="px-5 py-4">
         <div className="flex max-w-[240px] flex-wrap gap-1.5">
           {event.affectedMarkets.length ? (
@@ -157,11 +158,11 @@ export default function NewsPage() {
   const [impact, setImpact] =
     useState("All Impact");
 
-  const [market, setMarket] =
-    useState("All Markets");
+  const [currency, setCurrency] =
+    useState("All Currencies");
 
   const [period, setPeriod] =
-    useState("Today");
+    useState("This Week");
 
   const {
     data,
@@ -175,24 +176,24 @@ export default function NewsPage() {
   async function handleRefresh() {
     await load(
       impact,
-      market,
+      currency,
       period,
     );
   }
 
   function resetFilters() {
     setImpact("All Impact");
-    setMarket("All Markets");
-    setPeriod("Today");
+    setCurrency("All Currencies");
+    setPeriod("This Week");
   }
 
   const cards = [
     {
-      label: "Upcoming Events",
+      label: "Calendar Events",
       value: data
         ? String(data.total)
         : "—",
-      note: "Events matching selected filters",
+      note: "Events matching the selected calendar view",
     },
     {
       label: "High Impact",
@@ -209,11 +210,11 @@ export default function NewsPage() {
       note: "Setups requiring protection",
     },
     {
-      label: "Affected Markets",
+      label: "Currencies Covered",
       value: data
         ? String(data.affectedMarkets)
         : "—",
-      note: "Markets exposed to event risk",
+      note: "Currencies represented in loaded events",
     },
   ];
 
@@ -226,14 +227,14 @@ export default function NewsPage() {
           </p>
 
           <h1 className="mt-2 text-3xl font-black tracking-tight text-white">
-            Market News
+            Economic News
           </h1>
 
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
-            Track economic events, market-moving
-            news, affected instruments, and potential
-            conflicts before Blue-Trading-AI approves
-            a signal.
+            Track the live weekly economic calendar,
+            filter events by currency and impact, and
+            identify news conflicts before Blue-Trading-AI
+            approves a signal.
           </p>
         </div>
 
@@ -289,11 +290,11 @@ export default function NewsPage() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-600">
-              News Filters
+              Calendar Filters
             </p>
 
             <h2 className="mt-2 text-lg font-black text-white">
-              Find relevant economic events
+              Weekly economic calendar controls
             </h2>
           </div>
 
@@ -342,18 +343,18 @@ export default function NewsPage() {
 
           <label className="block">
             <span className="text-xs font-black text-slate-300">
-              Market
+              Currency
             </span>
 
             <select
-              value={market}
+              value={currency}
               onChange={(event) =>
-                setMarket(event.target.value)
+                setCurrency(event.target.value)
               }
               disabled={isLoading}
               className="mt-2 w-full rounded-xl border border-blue-400/10 bg-[#091426] px-4 py-3 text-sm text-white disabled:opacity-60"
             >
-              {markets.map((item) => (
+              {currencies.map((item) => (
                 <option key={item}>
                   {item}
                 </option>
@@ -361,26 +362,17 @@ export default function NewsPage() {
             </select>
           </label>
 
-          <label className="block">
+          <div className="block">
             <span className="text-xs font-black text-slate-300">
-              Period
+              Calendar View
             </span>
 
-            <select
-              value={period}
-              onChange={(event) =>
-                setPeriod(event.target.value)
-              }
-              disabled={isLoading}
-              className="mt-2 w-full rounded-xl border border-blue-400/10 bg-[#091426] px-4 py-3 text-sm text-white disabled:opacity-60"
-            >
-              {periods.map((item) => (
-                <option key={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
+            <div className="mt-2">
+              <div className="rounded-xl border border-cyan-300/25 bg-cyan-300/[0.08] px-4 py-3 text-center text-xs font-black text-cyan-200">
+                This Week
+              </div>
+            </div>
+          </div>
 
           <button
             type="button"
@@ -390,7 +382,7 @@ export default function NewsPage() {
           >
             {isLoading
               ? "Loading News..."
-              : "Refresh Market News"}
+              : "Refresh Calendar"}
           </button>
         </div>
       </section>
@@ -410,7 +402,7 @@ export default function NewsPage() {
 
             <div className="text-right">
               <p className="rounded-xl border border-blue-400/10 bg-blue-500/[0.04] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                {impact} · {market} · {period}
+                {impact} · {currency} · {period}
               </p>
 
               <p className="mt-2 text-[10px] text-slate-700">
@@ -434,7 +426,8 @@ export default function NewsPage() {
                       "Impact",
                       "Forecast",
                       "Previous",
-                      "Affected Markets",
+                      "Actual",
+                      "Affected Currency",
                       "Signal Action",
                     ].map((heading) => (
                       <th
@@ -467,13 +460,13 @@ export default function NewsPage() {
                 <h3 className="mt-5 text-lg font-black text-white">
                   {data
                     ? "No matching economic events"
-                    : "Ready for live economic events"}
+                    : "Ready for live weekly economic events"}
                 </h3>
 
                 <p className="mt-3 text-sm leading-6 text-slate-500">
                   {data
                     ? "The backend returned no verified events for the selected filters."
-                    : "Choose the filters and refresh market news to load official backend data."}
+                    : "Choose impact and currency filters, then refresh the weekly calendar to load live backend data."}
                 </p>
               </div>
             </div>
@@ -496,7 +489,7 @@ export default function NewsPage() {
                 "Reduce confidence during uncertain releases",
                 "Check event direction against technical bias",
                 "Protect XAUUSD around major USD events",
-                "Protect BTCUSD during major crypto events",
+                "Protect BTCUSD around major USD macro events",
                 "Record every news-based rejection reason",
               ].map((rule) => (
                 <div

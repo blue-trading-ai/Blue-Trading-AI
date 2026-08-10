@@ -96,6 +96,35 @@ class Settings(BaseSettings):
     TWELVE_DATA_API_KEY: str = ""
 
     # ==========================
+    # ECONOMIC NEWS
+    # ==========================
+
+    ECONOMIC_NEWS_PROVIDER: Literal[
+        "forex_factory",
+    ] = "forex_factory"
+
+    ECONOMIC_NEWS_WEEKLY_URL: str = (
+        "https://nfs.faireconomy.media/"
+        "ff_calendar_thisweek.json"
+    )
+
+    ECONOMIC_NEWS_REQUEST_TIMEOUT_SECONDS: int = Field(
+        default=10,
+        ge=3,
+        le=30,
+    )
+
+    ECONOMIC_NEWS_USER_AGENT: str = (
+        "Blue-Trading-AI/49 EconomicNews"
+    )
+
+    ECONOMIC_NEWS_CACHE_MINUTES: int = Field(
+        default=15,
+        ge=1,
+        le=120,
+    )
+
+    # ==========================
     # CORS
     # ==========================
 
@@ -207,6 +236,45 @@ class Settings(BaseSettings):
         value: str,
     ) -> str:
         return str(value or "").strip()
+
+    @field_validator("ECONOMIC_NEWS_WEEKLY_URL")
+    @classmethod
+    def validate_economic_news_url(
+        cls,
+        value: str,
+    ) -> str:
+        cleaned = str(value or "").strip()
+        parsed = urlparse(cleaned)
+
+        if (
+            parsed.scheme != "https"
+            or not parsed.netloc
+        ):
+            raise ValueError(
+                "ECONOMIC_NEWS_WEEKLY_URL must be a valid HTTPS URL."
+            )
+
+        return cleaned
+
+    @field_validator("ECONOMIC_NEWS_USER_AGENT")
+    @classmethod
+    def validate_economic_news_user_agent(
+        cls,
+        value: str,
+    ) -> str:
+        cleaned = str(value or "").strip()
+
+        if not cleaned:
+            raise ValueError(
+                "ECONOMIC_NEWS_USER_AGENT must not be empty."
+            )
+
+        if len(cleaned) > 200:
+            raise ValueError(
+                "ECONOMIC_NEWS_USER_AGENT is too long."
+            )
+
+        return cleaned
 
     @field_validator("CORS_ORIGINS")
     @classmethod
